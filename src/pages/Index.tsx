@@ -171,8 +171,8 @@ function WeekScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="text-center">
-        <h1 className="text-2xl font-bold text-primary">This Week</h1>
+      <header className="text-center rounded-xl px-4 py-4" style={{ backgroundColor: "hsl(var(--header-bg))", color: "hsl(var(--header-foreground))" }}>
+        <h1 className="text-2xl font-bold">🌊 This Week</h1>
       </header>
 
       {loading ? (

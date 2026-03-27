@@ -18,6 +18,8 @@ All colors MUST be HSL.
     --popover-foreground: 220 10% 20%;
 
     --primary: 184 78% 26%;
+    --header-bg: 216 73% 18%;
+    --header-foreground: 0 0% 100%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 15% 88%;
