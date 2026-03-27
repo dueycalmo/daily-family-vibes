@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const MOOD_COLORS = [
   "hsl(var(--mood-1))",
@@ -8,29 +9,36 @@ const MOOD_COLORS = [
   "hsl(var(--mood-5))",
 ];
 
-const DUMMY_ENTRIES = [
-  { date: "Mon 24 Mar", mood: 4, note: "Good day at school, no meltdowns", win: "Ate dinner without fuss" },
-  { date: "Tue 25 Mar", mood: 2, note: "Difficult morning routine", win: "Said sorry unprompted" },
-  { date: "Wed 26 Mar", mood: 5, note: "Calm and happy all day", win: "Helped tidy up toys" },
-];
-
 type Entry = { date: string; mood: number; note: string; win: string };
 
 function LogScreen({ onViewWeek }: { onViewWeek: () => void }) {
   const [mood, setMood] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const [win, setWin] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (mood === null) return;
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      setMood(null);
-      setNote("");
-      setWin("");
-    }, 1500);
+    setStatus("saving");
+    const { error } = await supabase.from("mood_logs").insert({
+      mood_score: mood,
+      behaviour_note: note || null,
+      win_text: win || null,
+    });
+    if (error) {
+      setStatus("error");
+      setErrorMsg(error.message);
+      setTimeout(() => setStatus("idle"), 3000);
+    } else {
+      setStatus("saved");
+      setTimeout(() => {
+        setStatus("idle");
+        setMood(null);
+        setNote("");
+        setWin("");
+      }, 2000);
+    }
   };
 
   return (
@@ -88,11 +96,15 @@ function LogScreen({ onViewWeek }: { onViewWeek: () => void }) {
 
       <button
         onClick={handleSave}
-        disabled={mood === null}
+        disabled={mood === null || status === "saving"}
         className="w-full rounded-lg bg-primary text-primary-foreground py-3 text-sm font-semibold transition-colors hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {saved ? "✓ Saved!" : "Save today's entry"}
+        {status === "saving" ? "Saving..." : status === "saved" ? "Entry saved ✓" : "Save today's entry"}
       </button>
+
+      {status === "error" && (
+        <p className="text-sm text-destructive text-center">{errorMsg}</p>
+      )}
 
       <button
         onClick={onViewWeek}
@@ -127,7 +139,35 @@ function EntryCard({ entry }: { entry: Entry }) {
 }
 
 function WeekScreen({ onBack }: { onBack: () => void }) {
-  const entries = DUMMY_ENTRIES;
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEntries = async () => {
+      const { data, error } = await supabase
+        .from("mood_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(7);
+
+      if (!error && data) {
+        setEntries(
+          data.map((row) => ({
+            date: new Date(row.created_at!).toLocaleDateString("en-GB", {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+            }),
+            mood: row.mood_score,
+            note: row.behaviour_note || "",
+            win: row.win_text || "",
+          }))
+        );
+      }
+      setLoading(false);
+    };
+    fetchEntries();
+  }, []);
 
   return (
     <div className="flex flex-col gap-5">
@@ -135,7 +175,11 @@ function WeekScreen({ onBack }: { onBack: () => void }) {
         <h1 className="text-2xl font-bold text-primary">This Week</h1>
       </header>
 
-      {entries.length === 0 ? (
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : entries.length === 0 ? (
         <p className="text-center text-muted-foreground text-sm py-8">
           No entries yet. Start logging today.
         </p>
