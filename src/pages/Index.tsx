@@ -68,7 +68,7 @@ function LogScreen({ onViewWeek }: { onViewWeek: () => void }) {
           ))}
         </div>
         <div className="flex justify-between text-xs text-muted-foreground mt-1 px-1">
-          <span>Tough test</span>
+          <span>Tough</span>
           <span>Great</span>
         </div>
       </div>
