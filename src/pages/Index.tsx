@@ -47,7 +47,7 @@ function LogScreen({ onViewWeek }: { onViewWeek: () => void }) {
             <button
               key={n}
               onClick={() => setMood(n)}
-              className="w-12 h-12 rounded-full text-sm font-bold transition-all duration-200"
+              className="w-[48px] h-[48px] rounded-full text-base font-bold transition-all duration-200 flex items-center justify-center"
               style={{
                 backgroundColor: mood === n ? MOOD_COLORS[n - 1] : "hsl(var(--muted))",
                 color: mood === n ? "white" : "hsl(var(--muted-foreground))",
