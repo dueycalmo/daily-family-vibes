@@ -32,12 +32,12 @@ function LogScreen({ onViewWeek }: { onViewWeek: () => void }) {
       setTimeout(() => setStatus("idle"), 3000);
     } else {
       setStatus("saved");
+      setMood(null);
+      setNote("");
+      setWin("");
       setTimeout(() => {
         setStatus("idle");
-        setMood(null);
-        setNote("");
-        setWin("");
-      }, 2000);
+      }, 3000);
     }
   };
 
