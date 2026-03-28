@@ -32,14 +32,29 @@ function LogScreen({ onViewWeek }: { onViewWeek: () => void }) {
       setTimeout(() => setStatus("idle"), 3000);
     } else {
       setStatus("saved");
+      setMood(null);
+      setNote("");
+      setWin("");
       setTimeout(() => {
         setStatus("idle");
-        setMood(null);
-        setNote("");
-        setWin("");
-      }, 2000);
+      }, 3000);
     }
   };
+
+  if (status === "saved") {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="flex flex-col items-center gap-3 animate-in zoom-in-75 duration-300">
+          <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center shadow-lg">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <p className="text-lg font-semibold text-foreground">Entry saved</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,7 +114,7 @@ function LogScreen({ onViewWeek }: { onViewWeek: () => void }) {
         disabled={mood === null || status === "saving"}
         className="w-full rounded-lg bg-primary text-primary-foreground py-3 text-sm font-semibold transition-colors hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {status === "saving" ? "Saving..." : status === "saved" ? "Entry saved ✓" : "Save today's entry"}
+        {status === "saving" ? "Saving..." : "Save today's entry"}
       </button>
 
       {status === "error" && (
