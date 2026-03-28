@@ -141,6 +141,9 @@ function EntryCard({ entry }: { entry: Entry }) {
 function WeekScreen({ onBack }: { onBack: () => void }) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reflection, setReflection] = useState<string | null>(null);
+  const [reflectionLoading, setReflectionLoading] = useState(false);
+  const [reflectionError, setReflectionError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEntries = async () => {
@@ -169,6 +172,55 @@ function WeekScreen({ onBack }: { onBack: () => void }) {
     fetchEntries();
   }, []);
 
+  const handleReflect = async () => {
+    setReflectionLoading(true);
+    setReflectionError(null);
+    setReflection(null);
+
+    try {
+      const { data, error } = await supabase
+        .from("mood_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(7);
+
+      if (error || !data || data.length === 0) {
+        setReflectionError("No entries to reflect on yet. Log a few days first!");
+        setReflectionLoading(false);
+        return;
+      }
+
+      const formatted = data
+        .map((row) => {
+          const d = new Date(row.created_at!).toLocaleDateString("en-GB", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          });
+          return `Date: ${d}\nMood score: ${row.mood_score}\nBehaviour note: ${row.behaviour_note || "none logged"}\nWin of the day: ${row.win_text || "none logged"}`;
+        })
+        .join("\n\n");
+
+      const prompt = `You are a warm, supportive companion for parents navigating a complex time with their child. Here are the last 7 days of family mood log entries:\n\n${formatted}\n\nBased on these entries, write one warm, encouraging paragraph (max 80 words) that notices one pattern and offers one gentle, practical suggestion. Speak directly to the parent. Be human, not clinical. Start with something you genuinely noticed in the data.`;
+
+      const { data: aiData, error: aiError } = await supabase.functions.invoke(
+        "chat-anthropic",
+        { body: { prompt } }
+      );
+
+      if (aiError) throw new Error(aiError.message);
+      if (aiData?.error) throw new Error(aiData.error);
+
+      const text = aiData?.content?.find((b: any) => b.type === "text")?.text;
+      setReflection(text || "No reflection generated.");
+    } catch (e: any) {
+      setReflectionError("Something went wrong generating your reflection. Please try again.");
+      console.error("Reflection error:", e);
+    } finally {
+      setReflectionLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <header className="text-center rounded-xl px-4 py-4" style={{ backgroundColor: "hsl(var(--header-bg))", color: "hsl(var(--header-foreground))" }}>
@@ -184,11 +236,34 @@ function WeekScreen({ onBack }: { onBack: () => void }) {
           No entries yet. Start logging today.
         </p>
       ) : (
-        <div className="flex flex-col gap-3">
-          {entries.map((entry, i) => (
-            <EntryCard key={i} entry={entry} />
-          ))}
-        </div>
+        <>
+          <div className="flex flex-col gap-3">
+            {entries.map((entry, i) => (
+              <EntryCard key={i} entry={entry} />
+            ))}
+          </div>
+
+          <button
+            onClick={handleReflect}
+            disabled={reflectionLoading}
+            className="w-full rounded-lg bg-primary text-primary-foreground py-3 text-sm font-semibold transition-colors hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {reflectionLoading ? "Finding patterns..." : "✨ Reflect on this week"}
+          </button>
+
+          {reflectionError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4">
+              <p className="text-sm text-destructive">{reflectionError}</p>
+            </div>
+          )}
+
+          {reflection && (
+            <div className="rounded-xl border border-border p-4" style={{ backgroundColor: "hsl(var(--background))" }}>
+              <p className="text-xs font-medium text-primary mb-2">✨ Weekly Reflection</p>
+              <p className="text-sm text-foreground leading-relaxed">{reflection}</p>
+            </div>
+          )}
+        </>
       )}
 
       <button
